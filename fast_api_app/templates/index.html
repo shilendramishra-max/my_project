@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Service Recon Control Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <style>
+        /* Custom scrollbar to match dark aesthetic */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
+</head>
+<body class="bg-[#0b0f17] text-slate-200 min-h-screen font-sans antialiased selection:bg-blue-500/30">
+
+    <header class="bg-[#0f172a]/80 backdrop-blur border-b border-slate-800/60 sticky top-0 z-50 px-6 py-4 shadow-lg flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-xl">🔄</span>
+            <h1 class="text-lg font-bold tracking-wider uppercase bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Multiservice Recon Control Dashboard <span class="text-xs text-slate-500 font-normal lowercase">(FastAPI Production Engine)</span>
+            </h1>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-900/60 px-3 py-1.5 rounded-md border border-slate-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Engine Status: Operational</span>
+        </div>
+    </header>
+
+    <div class="max-w-[1600px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <aside class="space-y-6 lg:col-span-1">
+            <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <h2 class="text-sm font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2 mb-4">
+                    📁 Navigation Control
+                </h2>
+                
+                <label class="block text-xs text-slate-500 font-medium mb-2">Select Active Cron Service:</label>
+                <div class="relative">
+                    <select onchange="location = '?service=' + this.value" class="w-full bg-[#1e293b] border border-slate-700/80 rounded-lg p-3 text-sm text-slate-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none cursor-pointer font-medium shadow-inner transition-colors">
+                        {% for s in services %}
+                        <option value="{{ s }}" {% if s == selected_service %}selected{% endif %}>{{ s }} [v]</option>
+                        {% endfor %}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-1">
+                    <div class="flex items-center justify-between p-2.5 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <span class="uppercase tracking-wider">⚡ {{ selected_service }} Active</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="lg:col-span-3 space-y-6">
+            
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📊</span>
+                <h2 class="text-2xl font-black text-slate-100 tracking-tight">Service Panel: <span class="text-blue-400 font-mono">{{ selected_service }}</span></h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl md:col-span-1 flex flex-col justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                        <span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Current Execution Status
+                    </h3>
+                    <div class="p-4 rounded-xl text-center font-bold text-xs tracking-wide border transition-all duration-300 shadow-inner my-auto
+                        {% if 'COMPLETE' in status %} bg-emerald-950/40 text-emerald-400 border-emerald-800/80 shadow-emerald-950/50
+                        {% elif 'LOCKED' in status or 'RUNNING' in status %} bg-amber-950/40 text-amber-400 border-amber-800/80 shadow-amber-950/50 ring-1 ring-amber-500/20
+                        {% else %} bg-rose-950/40 text-rose-400 border-rose-800/80 shadow-rose-950/50 ring-1 ring-rose-500/30 animate-pulse {% endif %}">
+                        <div class="uppercase tracking-widest text-[11px] opacity-60 mb-1">System State</div>
+                        <div class="text-sm font-black">{{ status }}</div>
+                    </div>
+                </div>
+
+                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl md:col-span-2">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                        📅 Past 5 Days Recon History Tracker
+                    </h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {% for day in recon_history %}
+                        <div class="border rounded-xl p-3 text-center bg-[#131c2e]/60 transition duration-300 hover:scale-[1.03] flex flex-col justify-between h-20
+                            {% if day.color == 'green' %} border-emerald-900/60 bg-emerald-950/10
+                            {% elif day.color == 'red' %} border-rose-900/60 bg-rose-950/10
+                            {% elif day.color == 'yellow' %} border-amber-900/60 bg-amber-950/10
+                            {% else %} border-slate-800/80 bg-slate-900/40 {% endif %}">
+                            
+                            <div class="text-[10px] text-slate-500 font-bold tracking-tight mb-1">{{ day.date }}</div>
+                            
+                            <div class="flex items-center justify-center gap-1.5">
+                                {% if day.color == 'green' %}
+                                <span class="text-emerald-400 text-xs font-black uppercase tracking-wider">✓ Done</span>
+                                {% elif day.color == 'red' %}
+                                <span class="text-rose-400 text-xs font-black uppercase tracking-wider animate-pulse">✕ Failed</span>
+                                {% elif day.color == 'yellow' %}
+                                <span class="text-amber-400 text-[11px] font-black uppercase tracking-tight">⚠ No Flag</span>
+                                {% else %}
+                                <span class="text-slate-500 text-xs font-bold uppercase tracking-wider">⏳ Pend</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col h-[520px]">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            📋 Standard Output Logs (out/*.txt)
+                        </h3>
+                        <span class="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span>
+                    </div>
+                    
+                    <div class="text-[11px] text-slate-500 mb-2 font-mono">Recent stream processing trace execution blocks:</div>
+                    
+                    <pre class="bg-[#05070c] text-emerald-400 p-4 rounded-xl border border-slate-900 text-xs font-mono overflow-auto flex-1 leading-relaxed shadow-inner whitespace-pre-wrap select-text">{% if "No output logs found" in out_details %}<span class="text-slate-600 italic">{{ out_details }}</span>{% else %}{{ out_details }}{% endif %}</pre>
+                    
+                    {% if error_details %}
+                    <div class="mt-4 p-3 bg-rose-950/30 border border-rose-900/50 rounded-xl text-xs text-rose-400 font-mono max-h-32 overflow-y-auto">
+                        <div class="font-bold uppercase tracking-wider text-[10px] text-rose-500 mb-1">🚨 System Traceback Error Detected:</div>
+                        {{ error_details }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col h-[520px]">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            🎛️ Safe Playground Sandbox (Ace Engine)
+                        </h3>
+                        <span class="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"></span>
+                    </div>
+                    
+                    <div class="mb-3 grid grid-cols-1 gap-2">
+                        <select id="fileSelect" onchange="loadFileContent()" class="w-full bg-[#1e293b] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none focus:border-purple-500 cursor-pointer shadow-inner">
+                            <option value="">-- Select Template File to Load --</option>
+                            {% for f in files %}
+                            <option value="{{ f }}">{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="flex justify-end mb-2">
+    <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded border border-slate-700 cursor-pointer">
+        ↕ Toggle Full Screen (Esc to Exit)
+    </button>
+</div>
+                    </div>
+
+                    <div id="infoBanner" class="hidden bg-blue-950/40 text-blue-400 border border-blue-900/50 p-2 rounded-lg text-[11px] mb-2 font-medium"></div>
+
+                    <div id="editor" class="w-full flex-1 rounded-xl border border-slate-900 text-sm shadow-xl overflow-hidden"></div>
+
+                    <div class="mt-4">
+                        <button onclick="loadIntoTemplate()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-wider py-3 px-4 rounded-lg transition duration-200 shadow-md transform active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                            📥 Load Code into Template (No Risk Mode)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="securitySection" class="hidden bg-[#111827] border border-slate-800/80 rounded-xl p-5 shadow-2xl space-y-4 ring-1 ring-amber-500/10">
+                <h4 class="text-sm font-bold text-amber-400 flex items-center gap-2 uppercase tracking-wider">
+                    ⚠️ Playground Execution Security Access Authorization Gate
+                </h4>
+                
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
+                    <label class="flex items-center gap-3 cursor-pointer text-slate-400 text-xs select-none">
+                        <input type="checkbox" id="confirmCheck" class="w-4 h-4 accent-amber-500 rounded bg-slate-800 border-slate-700 focus:ring-0">
+                        <span>I confirm to execute this temporary playground staging template pipeline.</span>
+                    </label>
+                    
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <input type="password" id="secPin" placeholder="Enter Security PIN" class="bg-[#1e293b] border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none focus:border-amber-500 tracking-widest w-full md:w-44 text-center shadow-inner">
+                        <button onclick="runPlayground()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-black uppercase tracking-wider py-2.5 px-5 rounded-lg transition duration-200 shadow-lg transform active:scale-95 whitespace-nowrap cursor-pointer">
+                            🚀 Approve & Run Template
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/python");
+        editor.setFontSize(13);
+        // Custom padding inside code container canvas editor
+        editor.renderer.setPadding(12);
+        editor.renderer.setScrollMargin(10, 10, 0, 0);
+
+        async function loadFileContent() {
+            let filename = document.getElementById('fileSelect').value;
+            let service = "{{ selected_service }}";
+            let banner = document.getElementById('infoBanner');
+            let secSec = document.getElementById('securitySection');
+            
+            if(!filename) {
+                editor.setValue("");
+                banner.classList.add('hidden');
+                secSec.classList.add('hidden');
+                return;
+            }
+
+            let response = await fetch(`/api/get-file-content?service=${service}&filename=${filename}`);
+            let data = await response.json();
+            editor.setValue(data.content, -1);
+
+            banner.innerHTML = `ℹ️ Original code configuration of <strong>${filename}</strong> successfully locked in workspace sandbox memory frame.`;
+            banner.classList.remove('hidden');
+            
+            if(filename.endsWith('.sh')) {
+                editor.session.setMode("ace/mode/sh");
+            } else {
+                editor.session.setMode("ace/mode/python");
+                secSec.classList.add('hidden'); 
+            }
+        }
+
+        async function loadIntoTemplate() {
+            let filename = document.getElementById('fileSelect').value;
+            let service = "{{ selected_service }}";
+            let content = editor.getValue();
+
+            if(!filename) { alert("Please select a target script template from dropdown stack first!"); return; }
+
+            let formData = new FormData();
+            formData.append('service', service);
+            formData.append('filename', filename);
+            formData.append('content', content);
+
+            let response = await fetch('/api/load-playground', { method: 'POST', body: formData });
+            let data = await response.json();
+            
+            alert(data.message);
+            
+            if(filename.endsWith('.sh')) {
+                document.getElementById('securitySection').classList.remove('hidden');
+            }
+        }
+
+        async function runPlayground() {
+            let confirm = document.getElementById('confirmCheck').checked;
+            let pin = document.getElementById('secPin').value;
+
+            if(!confirm) { alert("Please toggle the authentication confirmation statement gate switch first!"); return; }
+            if(!pin) { alert("PIN block authentication entry fields can't be null!"); return; }
+
+            let formData = new FormData();
+            formData.append('pin', pin);
+            formData.append('confirm', confirm);
+
+            let response = await fetch('/api/run-playground', { method: 'POST', body: formData });
+            let data = await response.json();
+
+            if(response.ok) {
+                alert(data.message);
+                document.getElementById('confirmCheck').checked = false;
+                document.getElementById('secPin').value = "";
+                document.getElementById('securitySection').classList.add('hidden');
+            } else {
+                alert(data.message || "Staging Authorization Denied. System Locked.");
+            }
+        }
+        function toggleFullScreen() {
+    let editorElem = document.getElementById("editor");
+    if (!document.fullscreenElement) {
+        editorElem.requestFullscreen().then(() => {
+            editor.resize();
+        }).catch(err => {
+            alert(`Error enabling full-screen mode: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+// Esc key se bahar aane par editor resize ho jaye automatic
+document.addEventListener('fullscreenchange', () => {
+    editor.resize();
+});
+    </script>
+</body>
+</html>
