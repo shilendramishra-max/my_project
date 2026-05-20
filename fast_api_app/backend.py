@@ -1,12 +1,26 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import os
 import datetime
 import subprocess
+from dotenv import load_dotenv
 
 app = FastAPI(title="Centralized Reconciliation Dashboard (FastAPI Production Engine)")
 
+# Server start hote hi yeh line .env file se saare secrets computer ki memory me load kar degi
+load_dotenv()
+
+# Memory se PIN uthao, agar .env file na mile toh backup ke liye 'admin123' rakh lo
+SYSTEM_SECRET_PIN = os.getenv("ADMIN_SECURITY_PIN", None)
+
+# .env se history ke din uthao (Default 15 rakha hai agar file na mile)
+DASHBOARD_HISTORY_DAYS = int(os.getenv("DASHBOARD_HISTORY_DAYS", 15))
+
+# .env se log limit uthao (Default 1500 characters)
+LOG_VIEW_CHARACTER_LIMIT = int(os.getenv("LOG_VIEW_CHARACTER_LIMIT", 1500))
 # --- ABSOLUTE TEMPLATE PATH DETECTION ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(CURRENT_DIR, "templates"))
@@ -80,7 +94,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
                 status = "⚪ NOT STARTED / PENDING"
 
         # --- SMART HISTORY TRACKER LOGIC (PAST 15 DAYS) ---
-        for i in range(15):
+        for i in range(DASHBOARD_HISTORY_DAYS):
             date_to_check = (datetime.datetime.now() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
             check_lck_path = os.path.join(usage_dir, f"check_usage-{date_to_check}.lck")
@@ -138,7 +152,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
         target_out_file = os.path.join(out_dir, f"out-{selected_date}.txt")
         if os.path.exists(target_out_file) and os.path.getsize(target_out_file) > 0:
             with open(target_out_file, "r", encoding="utf-8", errors="ignore") as f:
-                out_details = f.read()[-1500:]
+                out_details = f.read()[-LOG_VIEW_CHARACTER_LIMIT:]
         else:
             out_details = f"No output logs found for date: {selected_date}"
 
@@ -230,7 +244,10 @@ async def load_playground(service: str = Form(...), filename: str = Form(...), c
 # =========================================================================
 @app.post("/api/run-playground")
 async def run_playground(service: str = Form(...), pin: str = Form(...), confirm: bool = Form(...)):
-    if pin != "admin123" or not confirm:
+    # 🚨 SECURITY CHECK: Agar .env file nahi mili ya SYSTEM_SECRET_PIN config khali hai, toh access instant block!
+    if SYSTEM_SECRET_PIN is None or SYSTEM_SECRET_PIN == "":
+        return JSONResponse(status_code=500, content={"status": "error", "message": "❌ Server Security Misconfiguration: .env file or PIN is missing on host!"})
+    if pin != SYSTEM_SECRET_PIN or not confirm:
         return JSONResponse(status_code=403, content={"status": "error", "message": "❌ Invalid Security PIN or Unconfirmed Action!"})
         
     service_playground_dir = os.path.join(BASE_SERVER_DIR, service, "playground")
