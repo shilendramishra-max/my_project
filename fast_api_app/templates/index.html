@@ -42,7 +42,7 @@
                 <div class="relative">
                     <select onchange="location = '?service=' + this.value" class="w-full bg-[#1e293b] border border-slate-700/80 rounded-lg p-3 text-sm text-slate-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none cursor-pointer font-medium shadow-inner transition-colors">
                         {% for s in services %}
-                        <option value="{{ s }}" {% if s == selected_service %}selected{% endif %}>{{ s }} [v]</option>
+                        <option value="{{ s }}" {% if s == selected_service %}selected{% endif %}>{{ s }}</option>
                         {% endfor %}
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
@@ -76,34 +76,34 @@
                         {% if 'COMPLETE' in status %} bg-emerald-950/40 text-emerald-400 border-emerald-800/80 shadow-emerald-950/50
                         {% elif 'LOCKED' in status or 'RUNNING' in status %} bg-amber-950/40 text-amber-400 border-amber-800/80 shadow-amber-950/50 ring-1 ring-amber-500/20
                         {% else %} bg-rose-950/40 text-rose-400 border-rose-800/80 shadow-rose-950/50 ring-1 ring-rose-500/30 animate-pulse {% endif %}">
-                        <div class="uppercase tracking-widest text-[11px] opacity-60 mb-1">System State</div>
+                        <div class="uppercase tracking-widest text-[11px] opacity-60 mb-1">System State ({{ selected_date }})</div>
                         <div class="text-sm font-black">{{ status }}</div>
                     </div>
                 </div>
 
                 <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl md:col-span-2">
                     <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                        📅 Past 5 Days Recon History Tracker
+                        📅 Past 15 Days Recon History Tracker
                     </h3>
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                         {% for day in recon_history %}
-                        <div class="border rounded-xl p-3 text-center bg-[#131c2e]/60 transition duration-300 hover:scale-[1.03] flex flex-col justify-between h-20
-                            {% if day.color == 'green' %} border-emerald-900/60 bg-emerald-950/10
-                            {% elif day.color == 'red' %} border-rose-900/60 bg-rose-950/10
-                            {% elif day.color == 'yellow' %} border-amber-900/60 bg-amber-950/10
-                            {% else %} border-slate-800/80 bg-slate-900/40 {% endif %}">
+                        <div onclick="location = '?service={{ selected_service }}&date={{ day.date }}'" 
+                             class="border rounded-xl p-3 text-center transition duration-300 hover:scale-[1.05] flex flex-col justify-between h-20 cursor-pointer
+                                {% if day.date == selected_date %} ring-2 ring-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] bg-slate-800/80 {% else %} bg-[#131c2e]/60 {% endif %}
+                                {% if day.color == 'green' %} border-emerald-900/60 {% if day.date != selected_date %}bg-emerald-950/10{% endif %}
+                                {% elif day.color == 'red' %} border-rose-900/60 {% if day.date != selected_date %}bg-rose-950/10{% endif %}
+                                {% elif day.color == 'yellow' %} border-amber-900/60 {% if day.date != selected_date %}bg-amber-950/10{% endif %}
+                                {% else %} border-slate-800/80 {% if day.date != selected_date %}bg-slate-900/40{% endif %} {% endif %}">
                             
-                            <div class="text-[10px] text-slate-500 font-bold tracking-tight mb-1">{{ day.date }}</div>
+                            <div class="text-[10px] {% if day.date == selected_date %}text-blue-400 font-black{% else %}text-slate-500 font-bold{% endif %} tracking-tight mb-1">
+                                {{ day.date }} {% if day.date == selected_date %}📌{% endif %}
+                            </div>
                             
                             <div class="flex items-center justify-center gap-1.5">
-                                {% if day.color == 'green' %}
-                                <span class="text-emerald-400 text-xs font-black uppercase tracking-wider">✓ Done</span>
-                                {% elif day.color == 'red' %}
-                                <span class="text-rose-400 text-xs font-black uppercase tracking-wider animate-pulse">✕ Failed</span>
-                                {% elif day.color == 'yellow' %}
-                                <span class="text-amber-400 text-[11px] font-black uppercase tracking-tight">⚠ No Flag</span>
-                                {% else %}
-                                <span class="text-slate-500 text-xs font-bold uppercase tracking-wider">⏳ Pend</span>
+                                {% if day.color == 'green' %} <span class="text-emerald-400 text-xs font-black uppercase tracking-wider">✓ Done</span>
+                                {% elif day.color == 'red' %} <span class="text-rose-400 text-xs font-black uppercase tracking-wider animate-pulse">✕ Failed</span>
+                                {% elif day.color == 'yellow' %} <span class="text-amber-400 text-[11px] font-black uppercase tracking-tight">⚠ No Flag</span>
+                                {% else %} <span class="text-slate-500 text-xs font-bold uppercase tracking-wider">⏳ Pend</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -117,7 +117,7 @@
                 <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col h-[520px]">
                     <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
                         <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                            📋 Standard Output Logs (out/*.txt)
+                            📋 Standard Output Logs (<span class="text-blue-400 font-mono">out-{{ selected_date }}.txt</span>)
                         </h3>
                         <span class="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span>
                     </div>
@@ -141,7 +141,36 @@
                         </h3>
                         <span class="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"></span>
                     </div>
-                    
+
+                    <div class="mb-3 p-3 bg-slate-900/50 border border-slate-800 rounded-xl space-y-2.5">
+    <div class="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
+        ⚙️ Ad-hoc Folder & File Directory Manager
+    </div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <select id="adminFolderSelect" onchange="filterAdminFiles()" class="bg-[#1e293b] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none focus:border-amber-500 cursor-pointer shadow-inner">
+            <option value="">-- Folder --</option>
+            <option value="stat">stat/</option>
+            <option value="stat/error">stat/error/</option>
+            <option value="error">error/</option>
+            <option value="missing">missing/</option>
+        </select>
+
+        <select id="adminFileSelect" onchange="loadAdminFileContent()" disabled class="sm:col-span-2 bg-[#1e293b] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none focus:border-amber-500 cursor-pointer shadow-inner opacity-50 disabled:cursor-not-allowed">
+            <option value="">-- Select File --</option>
+        </select>
+        
+        <div class="flex gap-1">
+            <button onclick="handleAdminFileAction('truncate')" class="flex-1 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase rounded p-1.5 transition duration-150 cursor-pointer">
+                🧹 Clear
+            </button>
+            <button onclick="handleAdminFileAction('delete')" class="flex-1 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 text-[10px] font-bold uppercase rounded p-1.5 transition duration-150 cursor-pointer">
+                🗑️ Del
+            </button>
+        </div>
+    </div>
+</div>
+<hr class="border-slate-800/60 my-1">
                     <div class="mb-3 grid grid-cols-1 gap-2">
                         <select id="fileSelect" onchange="loadFileContent()" class="w-full bg-[#1e293b] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none focus:border-purple-500 cursor-pointer shadow-inner">
                             <option value="">-- Select Template File to Load --</option>
@@ -150,10 +179,10 @@
                             {% endfor %}
                         </select>
                         <div class="flex justify-end mb-2">
-    <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded border border-slate-700 cursor-pointer">
-        ↕ Toggle Full Screen (Esc to Exit)
-    </button>
-</div>
+                            <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded border border-slate-700 cursor-pointer">
+                                ↕ Toggle Full Screen (Esc to Exit)
+                            </button>
+                        </div>
                     </div>
 
                     <div id="infoBanner" class="hidden bg-blue-950/40 text-blue-400 border border-blue-900/50 p-2 rounded-lg text-[11px] mb-2 font-medium"></div>
@@ -196,15 +225,121 @@
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/python");
         editor.setFontSize(13);
-        // Custom padding inside code container canvas editor
         editor.renderer.setPadding(12);
         editor.renderer.setScrollMargin(10, 10, 0, 0);
+
+        // Global variable to hold state reference of opened admin ad-hoc file paths
+        var activeAdminFile = "";
+
+        // =========================================================================
+        // 🎛️ ADDED: NEW JS FUNCTIONS TO RESOLVE ADMIN DIRECTORY FILE INTERFACE
+        // =========================================================================
+        // Global raw dictionary storage injected securely from FastAPI context mapping
+        // Isme backend se folder wise grouped data store ho jayega automatic
+        var groupedOperationalFiles = {{ operational_files | tojson }};
+
+        function filterAdminFiles() {
+            let selectedFolder = document.getElementById('adminFolderSelect').value;
+            let fileDropdown = document.getElementById('adminFileSelect');
+            
+            // Clear current options inside file dropdown completely
+            fileDropdown.innerHTML = '<option value="">-- Select File --</option>';
+            
+            if(!selectedFolder) {
+                fileDropdown.disabled = true;
+                fileDropdown.classList.add('opacity-50', 'disabled:cursor-not-allowed');
+                editor.setValue("");
+                document.getElementById('infoBanner').classList.add('hidden');
+                return;
+            }
+            
+            // Fetch files belonging strictly to the selected folder scope
+            let filesInFolder = groupedOperationalFiles[selectedFolder] || [];
+            
+            if(filesInFolder.length > 0) {
+                filesInFolder.forEach(filePath => {
+                    // Dropdown me sirf asal file ka naam dikhane ke liye (folder prefix hata kar)
+                    let displayFilename = filePath.substring(filePath.indexOf('/') + 1);
+                    
+                    let option = document.createElement('option');
+                    option.value = filePath; // Value goes as "stat/stat-2026-05-19.txt"
+                    option.textContent = displayFilename; // Display as "stat-2026-05-19.txt"
+                    fileDropdown.appendChild(option);
+                });
+                
+                // Unlock and illuminate file dropdown list panel
+                fileDropdown.disabled = false;
+                fileDropdown.classList.remove('opacity-50', 'disabled:cursor-not-allowed');
+            } else {
+                let option = document.createElement('option');
+                option.value = "";
+                option.textContent = "⚠️ No files found inside directory";
+                fileDropdown.appendChild(option);
+                fileDropdown.disabled = true;
+                fileDropdown.classList.add('opacity-50', 'disabled:cursor-not-allowed');
+            }
+        }
+        async function loadAdminFileContent() {
+            let filename = document.getElementById('adminFileSelect').value;
+            let service = "{{ selected_service }}";
+            let banner = document.getElementById('infoBanner');
+            let secSec = document.getElementById('securitySection');
+            
+            // Flush standard template picker value to avoid cross-matrix execution conflicts
+            document.getElementById('fileSelect').value = "";
+            
+            if(!filename) { 
+                activeAdminFile = ""; 
+                editor.setValue("");
+                banner.classList.add('hidden');
+                return; 
+            }
+            activeAdminFile = filename;
+
+            let response = await fetch(`/api/get-file-content?service=${service}&filename=${filename}`);
+            let data = await response.json();
+            editor.setValue(data.content, -1);
+            editor.session.setMode("ace/mode/text"); // Plain-text configuration canvas for flag parsing
+
+            banner.innerHTML = `⚙️ Admin Mode Active: Opened file configuration <span class="font-mono text-amber-400">${filename}</span> inside editor space.`;
+            banner.classList.remove('hidden');
+            secSec.classList.add('hidden'); // Execution gate remains locked down during raw text audit
+        }
+
+        async function handleAdminFileAction(actionType) {
+            let filename = document.getElementById('adminFileSelect').value;
+            let service = "{{ selected_service }}";
+            
+            if(!filename) { alert("Please select an operational flag/log file from dropdown first!"); return; }
+            
+            let userConfirmation = confirm(`Are you completely sure you want to perform operational action [${actionType.toUpperCase()}] on target element: ${filename}?`);
+            if(!userConfirmation) return;
+
+            let formData = new FormData();
+            formData.append('service', service);
+            formData.append('relative_path', filename);
+            formData.append('action', actionType);
+
+            let response = await fetch('/api/delete-file', { method: 'POST', body: formData });
+            let data = await response.json();
+
+            alert(data.message);
+            if(response.ok) {
+                // Hard reset state transitions to force reload color trackers and elements
+                location.reload();
+            }
+        }
+        // =========================================================================
 
         async function loadFileContent() {
             let filename = document.getElementById('fileSelect').value;
             let service = "{{ selected_service }}";
             let banner = document.getElementById('infoBanner');
             let secSec = document.getElementById('securitySection');
+            
+            // Flush admin manager selector value to clear pipeline mapping states
+            document.getElementById('adminFileSelect').value = "";
+            activeAdminFile = "";
             
             if(!filename) {
                 editor.setValue("");
@@ -229,6 +364,12 @@
         }
 
         async function loadIntoTemplate() {
+            // Check if user is trying to overwrite an admin text file instead of sandbox pipeline template
+            if(activeAdminFile) {
+                alert("Action denied. You cannot use 'Load into Template' while editing system raw text logs/flag files in admin layout panel.");
+                return;
+            }
+
             let filename = document.getElementById('fileSelect').value;
             let service = "{{ selected_service }}";
             let content = editor.getValue();
@@ -251,13 +392,20 @@
         }
 
         async function runPlayground() {
+            {% if is_locked %}
+                alert("This staging template is currently locked and cannot be executed because another production instance is already running.");
+                return;
+            {% endif %}
+            
             let confirm = document.getElementById('confirmCheck').checked;
             let pin = document.getElementById('secPin').value;
+            let service = "{{ selected_service }}";
 
             if(!confirm) { alert("Please toggle the authentication confirmation statement gate switch first!"); return; }
             if(!pin) { alert("PIN block authentication entry fields can't be null!"); return; }
 
             let formData = new FormData();
+            formData.append('service', service); 
             formData.append('pin', pin);
             formData.append('confirm', confirm);
 
@@ -273,23 +421,23 @@
                 alert(data.message || "Staging Authorization Denied. System Locked.");
             }
         }
-        function toggleFullScreen() {
-    let editorElem = document.getElementById("editor");
-    if (!document.fullscreenElement) {
-        editorElem.requestFullscreen().then(() => {
-            editor.resize();
-        }).catch(err => {
-            alert(`Error enabling full-screen mode: ${err.message}`);
-        });
-    } else {
-        document.exitFullscreen();
-    }
-}
 
-// Esc key se bahar aane par editor resize ho jaye automatic
-document.addEventListener('fullscreenchange', () => {
-    editor.resize();
-});
+        function toggleFullScreen() {
+            let editorElem = document.getElementById("editor");
+            if (!document.fullscreenElement) {
+                editorElem.requestFullscreen().then(() => {
+                    editor.resize();
+                }).catch(err => {
+                    alert(`Error enabling full-screen mode: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            editor.resize();
+        });
     </script>
 </body>
 </html>
