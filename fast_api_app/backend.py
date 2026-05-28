@@ -10,17 +10,18 @@ from dotenv import load_dotenv
 
 app = FastAPI(title="Centralized Reconciliation Dashboard (FastAPI Production Engine)")
 
-# Server start hote hi yeh line .env file se saare secrets computer ki memory me load kar degi
+# It will load .env file in memory 
 load_dotenv()
 
-# Memory se PIN uthao, agar .env file na mile toh backup ke liye 'admin123' rakh lo
+# Pick the pin from memory
 SYSTEM_SECRET_PIN = os.getenv("ADMIN_SECURITY_PIN", None)
 
-# .env se history ke din uthao (Default 15 rakha hai agar file na mile)
+# Pick the history days from memory
 DASHBOARD_HISTORY_DAYS = int(os.getenv("DASHBOARD_HISTORY_DAYS", 15))
 
-# .env se log limit uthao (Default 1500 characters)
+# Log view character limit from memory
 LOG_VIEW_CHARACTER_LIMIT = int(os.getenv("LOG_VIEW_CHARACTER_LIMIT", 1500))
+
 # --- ABSOLUTE TEMPLATE PATH DETECTION ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(CURRENT_DIR, "templates"))
@@ -33,7 +34,10 @@ def get_all_services():
         return []
     return sorted([
         f for f in os.listdir(BASE_SERVER_DIR) 
-        if os.path.isdir(os.path.join(BASE_SERVER_DIR, f)) and not f.startswith('.') and f != 'playground'
+        if os.path.isdir(os.path.join(BASE_SERVER_DIR, f)) 
+        and not f.startswith('.') 
+        and f != 'playground'
+        and f != 'cleanup'  # 🚨 BUG FIX: Main navigation me cleanup folder ko aane se roka
     ])
 
 # 1. Main Dashboard Router Interface
@@ -50,7 +54,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
     error_details = ""
     is_locked = False
     files = []
-    operational_files = []  # 👈 TO KEEP TRACK OF DYNAMIC AD-HOC SYSTEM FILES
+    operational_files = []  
     recon_history = []
     
     if service:
@@ -60,7 +64,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
         out_dir = os.path.join(current_dir, "out")
         error_dir = os.path.join(current_dir, "error")
         usage_dir = os.path.join(current_dir, "usage")
-        missing_dir = os.path.join(current_dir, "missing")  # 👈 TARGET MISSING FOLDER
+        missing_dir = os.path.join(current_dir, "missing")  
         
         # Exact Shell LCK Path Configuration for Today
         today_lck_file = os.path.join(usage_dir, f"check_usage-{today_str}.lck")
@@ -70,12 +74,12 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             is_locked = True
             status = "⏳ RUNNING / LOCKED (Process is currently executing)"
             
-        # 2. SELECTED DATE STATUS CALCULATION (FULLY DYNAMIC NOW 🎯)
+        # 2. SELECTED DATE STATUS CALCULATION
         target_success_file = os.path.join(stat_dir, f"stat-{selected_date}.txt")
         target_error_file = os.path.join(stat_error_dir, f"stat-{selected_date}.txt")
         target_shell_error = os.path.join(error_dir, f"error-{selected_date}.txt")
         
-        # Lock check sirf aaj ki tarikh ke liye active rahega
+        # Lock check 
         if is_locked and selected_date == today_str:
             status = "⏳ RUNNING / LOCKED (Process is currently executing)"
         else:
@@ -93,7 +97,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             else:
                 status = "⚪ NOT STARTED / PENDING"
 
-        # --- SMART HISTORY TRACKER LOGIC (PAST 15 DAYS) ---
+        # --- SMART HISTORY TRACKER LOGIC (PAST X DAYS VIA .ENV) ---
         for i in range(DASHBOARD_HISTORY_DAYS):
             date_to_check = (datetime.datetime.now() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
@@ -105,7 +109,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             day_status = "⏳ Pending"
             day_color = "gray"
             
-            # ✅ STEP 1: SABSE PEHLE STRICT SUCCESS CHECK
+            # ✅ STEP 1: STRICT SUCCESS CHECK
             if os.path.exists(check_success_path) and os.path.getsize(check_success_path) > 0:
                 try:
                     with open(check_success_path, "r", encoding="utf-8") as f:
@@ -120,17 +124,17 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
                     day_status = "⚠️ Read Error"
                     day_color = "yellow"
                     
-            # ⏳ STEP 2: AGAR SUCCESS NAHI HAI, TOH CHECK KAREIN KI KYA ABHI RUNNING HAI
+            # ⏳ STEP 2: CHECK RUNNING 
             elif os.path.exists(check_lck_path):
                 day_status = "⏳ Running"
                 day_color = "yellow"
                 
-            # ❌ STEP 3: AGAR RUNNING BHI NAHI HAI, TABHI ERROR ENVELOPE CHECK KAREIN
+            # ❌ STEP 3: ERROR ENVELOPE CHECK 
             elif os.path.exists(check_error_path) or (os.path.exists(check_shell_err_path) and os.path.getsize(check_shell_err_path) > 0):
                 day_status = "❌ Failed / Error"
                 day_color = "red"
                 
-            # ⏳ STEP 4: AGAR SUCCESS FILE TOH HAI PAR USKA SIZE 0-BYTE HAI
+            # ⏳ STEP 4: SUCCESS FILE AND SIZE 0-BYTE 
             elif os.path.exists(check_success_path) and os.path.getsize(check_success_path) == 0:
                 day_status = "⏳ Incomplete (0B)"
                 day_color = "yellow"
@@ -145,9 +149,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
         if os.path.exists(current_dir):
             files = sorted([f for f in os.listdir(current_dir) if os.path.isfile(os.path.join(current_dir, f)) and (f.endswith('.py') or f.endswith('.sh'))])
             
-        # =========================================================================
-        # 📋 NEW DIRECT LOG READING BLOCK (FOR OUT LOGS & ERROR LOGS)
-        # =========================================================================
+        # --- LOG READING BLOCK ---
         out_details = ""
         target_out_file = os.path.join(out_dir, f"out-{selected_date}.txt")
         if os.path.exists(target_out_file) and os.path.getsize(target_out_file) > 0:
@@ -161,10 +163,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             with open(target_error_file, "r", encoding="utf-8", errors="ignore") as f:
                 error_details = f.read()
                 
-        # =========================================================================
-        # 🎯 AUTOMATED STRUCTURAL ENGINE SCANNER (UPGRADED TO NESTED DICTIONARY)
-        # =========================================================================
-        # Pehle array tha, ab hum isko dictionary bana rahe hain folder grouping ke liye
+        # --- AUTOMATED STRUCTURAL ENGINE SCANNER ---
         operational_files = {
             "stat": [],
             "stat/error": [],
@@ -183,8 +182,17 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             if os.path.exists(path):
                 for f in sorted(os.listdir(path)):
                     if os.path.isfile(os.path.join(path, f)) and not f.startswith('.'):
-                        # Sirf file ka naam push karenge relative path ke sath
                         operational_files[prefix].append(f"{prefix}/{f}")
+
+    # --- DYNAMIC CLEANUP FOLDER SCANNER ---
+    cleanup_dir = os.path.join(BASE_SERVER_DIR, "cleanup")
+    cleanup_scripts = []
+    
+    if os.path.exists(cleanup_dir) and os.path.isdir(cleanup_dir):
+        cleanup_scripts = sorted([
+            f for f in os.listdir(cleanup_dir) 
+            if os.path.isfile(os.path.join(cleanup_dir, f)) and f.endswith(".py")
+        ])
 
     return templates.TemplateResponse(
         request=request, 
@@ -196,10 +204,11 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             "out_details": out_details,
             "error_details": error_details,
             "files": files,
-            "operational_files": operational_files,  # 👈 Sent cleanly to template stack
+            "operational_files": operational_files,  
             "is_locked": is_locked,
             "recon_history": recon_history,
-            "selected_date": selected_date
+            "selected_date": selected_date,
+            "cleanup_scripts": cleanup_scripts,
         }
     )
 
@@ -212,9 +221,7 @@ async def get_file_content(service: str, filename: str):
             return {"content": f.read()}
     raise HTTPException(status_code=404, detail="File not found")
 
-# =========================================================================
-# 3. API Endpoint: Load/Save Code modifications inside Isolated Sandbox (SHELL FIX)
-# =========================================================================
+# 3. API Endpoint: Load/Save Code modifications inside Isolated Sandbox
 @app.post("/api/load-playground")
 async def load_playground(service: str = Form(...), filename: str = Form(...), content: str = Form(...)):
     service_playground_dir = os.path.join(BASE_SERVER_DIR, service, "playground")
@@ -230,7 +237,6 @@ async def load_playground(service: str = Form(...), filename: str = Form(...), c
     with open(target_file, "w", encoding="utf-8", newline='\n') as f:
         f.write(content)
         
-    # Linux compatibility support verification flag
     if target_name == "playground.sh" and os.name != 'nt':
         os.chmod(target_file, 0o755)
         
@@ -239,14 +245,11 @@ async def load_playground(service: str = Form(...), filename: str = Form(...), c
         "message": f"🎉 Content successfully written to {service}/playground/{target_name}!"
     }
 
-# =========================================================================
-# 4. API Endpoint: Safe Dynamic Authorize Execution for Playground (.sh only)
-# =========================================================================
+# 4. API Endpoint: Safe Dynamic Authorize Execution for Playground
 @app.post("/api/run-playground")
 async def run_playground(service: str = Form(...), pin: str = Form(...), confirm: bool = Form(...)):
-    # 🚨 SECURITY CHECK: Agar .env file nahi mili ya SYSTEM_SECRET_PIN config khali hai, toh access instant block!
     if SYSTEM_SECRET_PIN is None or SYSTEM_SECRET_PIN == "":
-        return JSONResponse(status_code=500, content={"status": "error", "message": "❌ Server Security Misconfiguration: .env file or PIN is missing on host!"})
+        return JSONResponse(status_code=500, content={"status": "error", "message": "❌ Server Security Misconfiguration: PIN is missing on host!"})
     if pin != SYSTEM_SECRET_PIN or not confirm:
         return JSONResponse(status_code=403, content={"status": "error", "message": "❌ Invalid Security PIN or Unconfirmed Action!"})
         
@@ -254,7 +257,7 @@ async def run_playground(service: str = Form(...), pin: str = Form(...), confirm
     target_sh_script = os.path.join(service_playground_dir, "playground.sh")
     
     if not os.path.exists(target_sh_script):
-        return JSONResponse(status_code=44, content={"status": "error", "message": f"❌ playground.sh not found inside {service}/playground/!"})
+        return JSONResponse(status_code=404, content={"status": "error", "message": f"❌ playground.sh not found inside {service}/playground/!"}) # 🚨 BUG FIX: Status code changed from 44 to 404
         
     try:
         if os.name == 'nt':
@@ -269,12 +272,9 @@ async def run_playground(service: str = Form(...), pin: str = Form(...), confirm
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# =========================================================================
-# 🎛️ 5. NEW API ENDPOINT: AD-HOC SYSTEM FILES DELETION / TRUNCATION ENGINE
-# =========================================================================
+# 5. API Endpoint: AD-HOC SYSTEM FILES DELETION / TRUNCATION ENGINE
 @app.post("/api/delete-file")
 async def delete_file(service: str = Form(...), relative_path: str = Form(...), action: str = Form(...)):
-    # Path traversal attack security check logic
     if ".." in relative_path or relative_path.startswith("/"):
         raise HTTPException(status_code=400, detail="Security alert: Unsafe path structure bypass attempt blocked.")
         
@@ -289,11 +289,45 @@ async def delete_file(service: str = Form(...), relative_path: str = Form(...), 
             message_response = f"🗑️ File '{relative_path}' completely removed from filesystem database storage."
         elif action == "truncate":
             with open(target_file_path, "w", encoding="utf-8") as f:
-                f.write("")  # Flushes down data allocation matrix instantly (0B state)
+                f.write("")  
             message_response = f"🧹 Content inside '{relative_path}' truncated successfully down to 0B."
         else:
             return JSONResponse(status_code=400, content={"status": "error", "message": "Operation signature verification validation failed."})
             
         return {"status": "success", "message": message_response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+# 6. API Endpoint: SECURE CLEANUP ENGINE WITH AUTOMATIC DATA INJECTION
+@app.post("/api/execute-cleanup")
+async def execute_cleanup(script_name: str = Form(...), target_date: str = Form(...)):
+    cleanup_dir = os.path.join(BASE_SERVER_DIR, "cleanup")
+    target_script_path = os.path.join(cleanup_dir, script_name)
+    
+    if not os.path.exists(target_script_path):
+        return JSONResponse(status_code=404, content={"status": "error", "message": f"❌ Cleanup script '{script_name}' not found!"})
+        
+    try:
+        # Cross-platform command resolver (Ensures python3 compatibility on Linux environments)
+        exec_cmd = ["python3", script_name] if os.name != 'nt' else ["python", script_name]
+        
+        process = subprocess.Popen(
+            exec_cmd,
+            cwd=cleanup_dir,
+            stdin=subprocess.PIPE,  
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True  
+        )
+        
+        # Injecting date dynamically with unix-newline command trigger
+        process.stdin.write(f"{target_date}\n")
+        process.stdin.flush()  
+        
+        return {
+            "status": "success",
+            "message": f"🧹 Cleanup process for '{script_name}' triggered for date {target_date} in background!"
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
