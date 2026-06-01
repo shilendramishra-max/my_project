@@ -17,8 +17,8 @@ load_dotenv()
 SYSTEM_SECRET_PIN = os.getenv("ADMIN_SECURITY_PIN", None)
 
 # Pick the history days from memory
-DASHBOARD_HISTORY_DAYS = int(os.getenv("DASHBOARD_HISTORY_DAYS", 15))
-
+END_HISTORY_DAYS = int(os.getenv("END_HISTORY_DAYS", 15))
+STRAT_HISTORY_DAYS = int(os.getenv("STRAT_HISTORY_DAYS", 0))
 # Log view character limit from memory
 LOG_VIEW_CHARACTER_LIMIT = int(os.getenv("LOG_VIEW_CHARACTER_LIMIT", 1500))
 
@@ -98,7 +98,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
                 status = "⚪ NOT STARTED / PENDING"
 
         # --- SMART HISTORY TRACKER LOGIC (PAST X DAYS VIA .ENV) ---
-        for i in range(DASHBOARD_HISTORY_DAYS):
+        for i in range(STRAT_HISTORY_DAYS,END_HISTORY_DAYS):
             date_to_check = (datetime.datetime.now() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
             check_lck_path = os.path.join(usage_dir, f"check_usage-{date_to_check}.lck")
@@ -129,13 +129,14 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
                 day_status = "⏳ Running"
                 day_color = "yellow"
                 
-            # ❌ STEP 3: ERROR ENVELOPE CHECK 
-            elif os.path.exists(check_error_path) or (os.path.exists(check_shell_err_path) and os.path.getsize(check_shell_err_path) > 0):
+            # ❌ STEP 3: FIXED ERROR ENVELOPE CHECK (STRICT SIZE AND EXISTENCE CHECK)
+            # Ab yeh tabhi laal dikhayega jab file ka size 0B se bada ho!
+            elif (os.path.exists(check_error_path) and os.path.getsize(check_error_path) > 0) or (os.path.exists(check_shell_err_path) and os.path.getsize(check_shell_err_path) > 0):
                 day_status = "❌ Failed / Error"
                 day_color = "red"
                 
-            # ⏳ STEP 4: SUCCESS FILE AND SIZE 0-BYTE 
-            elif os.path.exists(check_success_path) and os.path.getsize(check_success_path) == 0:
+            # ⏳ STEP 4: SUCCESS FILE OR ERROR FILE AND SIZE IS 0-BYTE (CLEANED STATE)
+            elif (os.path.exists(check_success_path) and os.path.getsize(check_success_path) == 0) or (os.path.exists(check_error_path) and os.path.getsize(check_error_path) == 0):
                 day_status = "⏳ Incomplete (0B)"
                 day_color = "yellow"
             
