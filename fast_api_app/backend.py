@@ -262,10 +262,12 @@ async def run_playground(service: str = Form(...), pin: str = Form(...), confirm
         
     try:
         if os.name == 'nt':
+            git_bash_path = r"C:\Users\shilendra.mishra_spi\AppData\Local\Programs\Git\usr\bin\bash.exe"
             venv_python = os.path.join(os.getcwd(), "venv", "Scripts", "python.exe")
             # subprocess.Popen(["cmd", "/c", "echo Running playground template on Windows"], cwd=service_playground_dir)
             # subprocess.Popen(["cmd", "/c", "bash playground.sh"], cwd=service_playground_dir)
-            subprocess.Popen(["cmd", "/c", "echo Running playground template on Windows && python playground.py"], cwd=service_playground_dir)
+            # subprocess.Popen(["cmd", "/c", "echo Running playground template on Windows && python playground.py"], cwd=service_playground_dir)
+            subprocess.Popen([git_bash_path, "playground.sh"], cwd=service_playground_dir)
         else:
             subprocess.Popen(["bash", "playground.sh"], cwd=service_playground_dir)
             
