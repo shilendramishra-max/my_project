@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Service Recon Control Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
     <style>
         /* Custom scrollbar to match dark aesthetic */
@@ -23,9 +23,21 @@
                 Multiservice Recon Control Dashboard <span class="text-xs text-slate-500 font-normal lowercase">(FastAPI Production Engine)</span>
             </h1>
         </div>
-        <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-900/60 px-3 py-1.5 rounded-md border border-slate-800">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Engine Status: Operational</span>
+        
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 text-xs bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-800 font-medium">
+                <span class="text-slate-400">👤 Active Session:</span>
+                <span class="text-blue-400 font-bold tracking-wide select-all">{{ user }}</span>
+            </div>
+            
+            <a href="/logout" class="bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-md text-xs font-bold tracking-wide transition duration-150 shadow-md flex items-center gap-1.5">
+                🚪 Secure Logout
+            </a>
+            
+            <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500 bg-slate-900/60 px-3 py-1.5 rounded-md border border-slate-800">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Engine: Operational</span>
+            </div>
         </div>
     </header>
 
@@ -69,45 +81,78 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
                 <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl md:col-span-1 flex flex-col justify-between">
-    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-        <span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Current Execution Status
-    </h3>
-    <div class="p-4 rounded-xl text-center font-bold text-xs tracking-wide border transition-all duration-300 shadow-inner my-auto
-        {% if 'COMPLETE' in status %} bg-emerald-950/40 text-emerald-400 border-emerald-800/80 shadow-emerald-950/50
-        {% elif 'LOCKED' in status or 'RUNNING' in status %} bg-amber-950/40 text-amber-400 border-amber-800/80 shadow-amber-950/50 ring-1 ring-amber-500/20
-        {% else %} bg-rose-950/40 text-rose-400 border-rose-800/80 shadow-rose-950/50 ring-1 ring-rose-500/30 animate-pulse {% endif %}">
-        <div class="uppercase tracking-widest text-[11px] opacity-60 mb-1">System State ({{ selected_date }})</div>
-        <div class="text-sm font-black">{{ status }}</div>
-    </div>
-</div>
-
-                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl md:col-span-2">
                     <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                        📅 Past {{ recon_history|length }} Days Recon History Tracker
+                        <span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Current Execution Status
                     </h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div id="live-status-box" class="p-4 rounded-xl text-center font-bold text-xs tracking-wide border transition-all duration-300 shadow-inner my-auto
+                        {% if 'COMPLETE' in status %} bg-emerald-950/40 text-emerald-400 border-emerald-800/80 shadow-emerald-950/50
+                        {% elif 'LOCKED' in status or 'RUNNING' in status %} bg-amber-950/40 text-amber-400 border-amber-800/80 shadow-amber-950/50 ring-1 ring-amber-500/20
+                        {% else %} bg-rose-950/40 text-rose-400 border-rose-800/80 shadow-rose-950/50 ring-1 ring-rose-500/30 animate-pulse {% endif %}">
+                        
+                        <div class="uppercase tracking-widest text-[11px] opacity-60 mb-1">System State ({{ selected_date }})</div>
+                        
+                        <div class="flex items-center justify-center gap-2">
+                            {% if 'LOCKED' in status or 'RUNNING' in status %}
+                                <span class="inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></span>
+                            {% endif %}
+                            <span id="live-status-text" class="text-sm font-black">{{ status }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#0f172a] border border-slate-800 rounded-xl p-5 shadow-xl md:col-span-2 flex flex-col justify-between">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3 mb-4">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            📅 Past {{ recon_history|length }} Days History Tracker
+                        </h3>
+                        
+                        <div class="flex bg-[#0b0f17] p-1 rounded-lg border border-slate-800 text-[11px] font-bold uppercase tracking-wider">
+                            <button onclick="switchHistoryTab('all')" id="tab-btn-all" class="px-3 py-1.5 rounded-md text-blue-400 bg-slate-800 transition duration-150 cursor-pointer">
+                                All
+                            </button>
+                            <button onclick="switchHistoryTab('success')" id="tab-btn-success" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-emerald-400 transition duration-150 cursor-pointer">
+                                🟢 Success
+                            </button>
+                            <button onclick="switchHistoryTab('failed')" id="tab-btn-failed" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-rose-400 transition duration-150 cursor-pointer">
+                                🔴 Failed
+                            </button>
+                            <button onclick="switchHistoryTab('pending')" id="tab-btn-pending" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-amber-400 transition duration-150 cursor-pointer">
+                                ⏳ Pending
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 max-h-[140px] overflow-y-auto pr-1">
                         {% for day in recon_history %}
                         <div onclick="location = '?service={{ selected_service }}&date={{ day.date }}'" 
-                             class="border rounded-xl p-3 text-center transition duration-300 hover:scale-[1.05] flex flex-col justify-between h-20 cursor-pointer
-                                {% if day.date == selected_date %} ring-2 ring-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] bg-slate-800/80 {% else %} bg-[#131c2e]/60 {% endif %}
-                                {% if day.color == 'green' %} border-emerald-900/60 {% if day.date != selected_date %}bg-emerald-950/10{% endif %}
-                                {% elif day.color == 'red' %} border-rose-900/60 {% if day.date != selected_date %}bg-rose-950/10{% endif %}
-                                {% elif day.color == 'yellow' %} border-amber-900/60 {% if day.date != selected_date %}bg-amber-950/10{% endif %}
-                                {% else %} border-slate-800/80 {% if day.date != selected_date %}bg-slate-900/40{% endif %} {% endif %}">
+                             data-date="{{ day.date }}"
+                             class="recon-day-card border rounded-xl p-3 text-center transition duration-300 hover:scale-[1.03] flex flex-col justify-between h-20 cursor-pointer
+                                {% if day.color == 'green' %} group-success border-emerald-900/60 {% if day.date != selected_date %}bg-emerald-950/10{% endif %}
+                                {% elif day.color == 'red' %} group-failed border-rose-900/60 {% if day.date != selected_date %}bg-rose-950/10{% endif %}
+                                {% else %} group-pending border-amber-900/60 {% if day.date != selected_date %}bg-amber-950/10{% endif %} {% endif %}
+                                {% if day.date == selected_date %} ring-2 ring-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] bg-slate-800/80 {% endif %}">
                             
                             <div class="text-[10px] {% if day.date == selected_date %}text-blue-400 font-black{% else %}text-slate-500 font-bold{% endif %} tracking-tight mb-1">
                                 {{ day.date }} {% if day.date == selected_date %}📌{% endif %}
                             </div>
                             
                             <div class="flex items-center justify-center gap-1.5">
-                                {% if day.color == 'green' %} <span class="text-emerald-400 text-xs font-black uppercase tracking-wider">✓ Done</span>
-                                {% elif day.color == 'red' %} <span class="text-rose-400 text-xs font-black uppercase tracking-wider animate-pulse">✕ Failed</span>
-                                {% elif day.color == 'yellow' %} <span class="text-amber-400 text-[11px] font-black uppercase tracking-tight">⚠ No Flag</span>
-                                {% else %} <span class="text-slate-500 text-xs font-bold uppercase tracking-wider">⏳ Pend</span>
+                                {% if day.color == 'green' %} 
+                                    <span class="text-emerald-400 text-xs font-black uppercase tracking-wider">✓ Done</span>
+                                {% elif day.color == 'red' %} 
+                                    <span class="text-rose-400 text-xs font-black uppercase tracking-wider animate-pulse">✕ Failed</span>
+                                {% elif day.color == 'yellow' %} 
+                                    <span class="text-amber-400 text-[11px] font-black uppercase tracking-tight">⚠ No Flag</span>
+                                {% else %} 
+                                    <span class="text-slate-500 text-xs font-bold uppercase tracking-wider">⏳ Pend</span>
                                 {% endif %}
                             </div>
                         </div>
                         {% endfor %}
+                    </div>
+                    
+                    <div id="tab-empty-message" class="hidden text-center py-6 text-xs font-mono text-slate-500 italic">
+                        No records found matching this category.
                     </div>
                 </div>
             </div>
@@ -171,7 +216,6 @@
                         </div>
                     </div>
 
-                    <hr class="border-slate-800/60 my-1">
                     <div class="mb-3 grid grid-cols-1 gap-2">
                         <select id="fileSelect" onchange="loadFileContent()" class="w-full bg-[#1e293b] border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none focus:border-purple-500 cursor-pointer shadow-inner">
                             <option value="">-- Select Template File to Load --</option>
@@ -260,10 +304,7 @@
         editor.renderer.setPadding(12);
         editor.renderer.setScrollMargin(10, 10, 0, 0);
 
-        // Global variable to hold state reference of opened admin ad-hoc file paths
         var activeAdminFile = "";
-
-        // Global raw dictionary storage injected securely from FastAPI context mapping
         var groupedOperationalFiles = {{ operational_files | tojson }};
 
         function filterAdminFiles() {
@@ -303,6 +344,7 @@
             }
         }
 
+        // 🛡️ API UPDATE: Injected safe session params via endpoints
         async function loadAdminFileContent() {
             let filename = document.getElementById('adminFileSelect').value;
             let service = "{{ selected_service }}";
@@ -416,28 +458,42 @@
                 return;
             {% endif %}
             
-            let confirm = document.getElementById('confirmCheck').checked;
+            let confirmCheck = document.getElementById('confirmCheck').checked;
             let pin = document.getElementById('secPin').value;
             let service = "{{ selected_service }}";
 
-            if(!confirm) { alert("Please toggle the authentication confirmation statement gate switch first!"); return; }
+            if(!confirmCheck) { alert("Please toggle the authentication confirmation statement gate switch first!"); return; }
             if(!pin) { alert("PIN block authentication entry fields can't be null!"); return; }
 
             let formData = new FormData();
             formData.append('service', service); 
             formData.append('pin', pin);
-            formData.append('confirm', confirm);
+            formData.append('confirm', confirmCheck);
+
+            const statusBox = document.getElementById('live-status-box');
+            if (statusBox) {
+                statusBox.className = "p-4 rounded-xl text-center font-bold text-xs tracking-wide border transition-all duration-300 shadow-inner my-auto bg-amber-950/40 text-amber-400 border-amber-800/80 shadow-amber-950/50 ring-1 ring-amber-500/20 animate-pulse";
+                statusBox.innerHTML = `
+                    <div class="uppercase tracking-widest text-[11px] opacity-60 mb-1">System State ({{ selected_date }})</div>
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></span>
+                        <span id="live-status-text" class="text-sm font-black">⏳ RUNNING / LOCKED (Process is currently executing)</span>
+                    </div>
+                `;
+            }
 
             let response = await fetch('/api/run-playground', { method: 'POST', body: formData });
             let data = await response.json();
 
             if(response.ok) {
-                alert(data.message);
+                console.log("🚀 Script triggered successfully in background. Activating loop sensor...");
                 document.getElementById('confirmCheck').checked = false;
                 document.getElementById('secPin').value = "";
                 document.getElementById('securitySection').classList.add('hidden');
+                startLivePolling();
             } else {
                 alert(data.message || "Staging Authorization Denied. System Locked.");
+                location.reload(); 
             }
         }
 
@@ -484,9 +540,7 @@
                     method: 'POST',
                     body: formData
                 });
-
                 let data = await response.json();
-
                 if (response.ok && data.status === "success") {
                     alert(`✅ Success:\n${data.message}`);
                 } else {
@@ -496,6 +550,137 @@
                 alert(`🚨 System Failure: Could not connect to backend cleanup engine. ${error}`);
             }
         }
+
+        function switchHistoryTab(category) {
+            const cards = document.querySelectorAll('.recon-day-card');
+            const emptyMsg = document.getElementById('tab-empty-message');
+            let visibleCount = 0;
+            const today = new Date();
+
+            const categories = ['all', 'success', 'failed', 'pending'];
+            categories.forEach(cat => {
+                const btn = document.getElementById(`tab-btn-${cat}`);
+                if(btn) {
+                    btn.classList.remove('text-blue-400', 'bg-slate-800');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            const activeBtn = document.getElementById(`tab-btn-${category}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                if (category === 'success') activeBtn.classList.add('text-emerald-400', 'bg-slate-800');
+                else if (category === 'failed') activeBtn.classList.add('text-rose-400', 'bg-slate-800');
+                else if (category === 'pending') activeBtn.classList.add('text-amber-400', 'bg-slate-800');
+                else activeBtn.classList.add('text-blue-400', 'bg-slate-800');
+            }
+
+            cards.forEach(card => {
+                const cardDateStr = card.getAttribute('data-date'); 
+                const cardDate = new Date(cardDateStr);
+                const diffTime = Math.abs(today - cardDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 1;
+
+                if (category === 'all') {
+                    card.style.display = 'flex';
+                    visibleCount++;
+                } else if (category === 'success' && card.classList.contains('group-success')) {
+                    if (diffDays <= 30) {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                } else if (category === 'failed' && card.classList.contains('group-failed')) {
+                    if (diffDays <= 60) {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                } else if (category === 'pending' && card.classList.contains('group-pending')) {
+                    if (diffDays <= 60) {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0) {
+                emptyMsg.classList.remove('hidden');
+            } else {
+                emptyMsg.classList.add('hidden');
+            }
+        }
+
+        function startLivePolling() {
+            console.log("🌀 Advanced Long-Running Log Streamer Activated...");
+            const logConsole = document.querySelector('pre.bg-\\[\\#05070c\\]');
+            const service = "{{ selected_service }}";
+            const selectedDate = "{{ selected_date }}";
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusResponse = await fetch(window.location.href);
+                    const htmlText = await statusResponse.text();
+                    
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+                    const newStatusBox = doc.getElementById('live-status-box');
+                    
+                    const logResponse = await fetch(`/api/stream-live-logs?service=${service}&date=${selectedDate}`);
+                    const logJson = await logResponse.json();
+                    
+                    if (logJson.status === "found" && logConsole) {
+                        logConsole.innerHTML = `<span class="text-blue-400 animate-pulse">[LIVE STREAMING]</span>\n` + logJson.data;
+                        logConsole.scrollTop = logConsole.scrollHeight;
+                    }
+
+                    if (newStatusBox) {
+                        if (newStatusBox.innerHTML.includes("RUNNING") || newStatusBox.innerHTML.includes("LOCKED")) {
+                            console.log("⏳ Long script is running... Streaming logs to terminal view.");
+                        } else {
+                            clearInterval(pollInterval);
+                            console.log("✅ Script finished processing! Freezing live console.");
+                            
+                            const statusText = document.getElementById('live-status-text');
+                            if (statusText) {
+                                statusText.innerText = "🔄 Syncing final results and wrapping logs...";
+                            }
+                            setTimeout(() => { 
+                                location.reload(); 
+                            }, 2500); 
+                        }
+                    }
+                } catch (err) {
+                    console.error("Error during live trace polling:", err);
+                }
+            }, 4000);
+        }
+
+        if ("{{ status }}".includes("RUNNING") || "{{ status }}".includes("LOCKED")) {
+            startLivePolling();
+        }
+
+        // ========================================================
+        // 🔒 NEW COMPLIANCE LAYER: TAB-CLOSE & BROWSER DESTROY AUTO LOGOUT
+        // ========================================================
+        window.addEventListener('visibilitychange', function() {
+            // Jab user browser ka tab badlega ya close karega toggle event fire hoga
+            if (document.visibilityState === 'hidden') {
+                // Background beacon signal hit karega jo cookie wipe kar dega safely
+                navigator.sendBeacon('/logout');
+            }
+        });
+
+        window.addEventListener('beforeunload', function() {
+            // Absolute browser kill logic execution layer
+            navigator.sendBeacon('/logout');
+        });
     </script>
 
     <footer class="mt-12 border-t border-slate-900/80 bg-[#0a0d14] py-4 text-center text-[11px] text-slate-600 font-mono tracking-wider">
