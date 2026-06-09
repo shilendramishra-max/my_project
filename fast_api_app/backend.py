@@ -31,12 +31,12 @@ templates = Jinja2Templates(directory=os.path.join(CURRENT_DIR, "templates"))
 # --- SIBLING FOLDER CRONS PATH ---
 BASE_SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../crons"))
 
-project_id = 'spicemoney-dwh'
+project_id = os.getenv("PROJECT_ID",None)
 os.environ['GOOGLE_CLOUD_QUOTA_PROJECT'] = project_id
 
 # 🎯 BUG FIX 1: Variable name changed to bq_client to match internal endpoints
 bq_client = bigquery.Client(project=project_id)
-DATASET_PREFIX = "spicemoney-dwh.sm_recon"
+DATASET_PREFIX = os.getenv("DATASET",None)
 
 
 # ========================================================
