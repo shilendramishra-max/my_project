@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
     <title>Multi-Service Recon Control Dashboard</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
     <style>
@@ -30,9 +37,11 @@
                 <span class="text-blue-400 font-bold tracking-wide select-all">{{ user }}</span>
             </div>
             
-            <a href="/logout" class="bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border border-rose-800/60 px-3 py-1.5 rounded-md text-xs font-bold tracking-wide transition duration-150 shadow-md flex items-center gap-1.5">
-                🚪 Secure Logout
-            </a>
+            <form method="POST" action="/logout" class="inline">
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 font-medium flex items-center gap-1">
+                    🚪 Secure Logout
+                </button>
+            </form>
             
             <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500 bg-slate-900/60 px-3 py-1.5 rounded-md border border-slate-800">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -305,6 +314,8 @@
         editor.renderer.setScrollMargin(10, 10, 0, 0);
 
         var activeAdminFile = "";
+        
+        // 🎯 JINJA COMPLIANCE FIX 1: Safe mapping via standard string injection
         var groupedOperationalFiles = {{ operational_files | tojson }};
 
         function filterAdminFiles() {
@@ -344,7 +355,6 @@
             }
         }
 
-        // 🛡️ API UPDATE: Injected safe session params via endpoints
         async function loadAdminFileContent() {
             let filename = document.getElementById('adminFileSelect').value;
             let service = "{{ selected_service }}";
@@ -662,25 +672,11 @@
             }, 4000);
         }
 
-        if ("{{ status }}".includes("RUNNING") || "{{ status }}".includes("LOCKED")) {
+        // 🎯 JINJA COMPLIANCE FIX 2: Dynamic status handling wrapped into safe JS string
+        const activeSystemStatus = "{{ status }}";
+        if (activeSystemStatus.includes("RUNNING") || activeSystemStatus.includes("LOCKED")) {
             startLivePolling();
         }
-
-        // ========================================================
-        // 🔒 NEW COMPLIANCE LAYER: TAB-CLOSE & BROWSER DESTROY AUTO LOGOUT
-        // ========================================================
-        window.addEventListener('visibilitychange', function() {
-            // Jab user browser ka tab badlega ya close karega toggle event fire hoga
-            if (document.visibilityState === 'hidden') {
-                // Background beacon signal hit karega jo cookie wipe kar dega safely
-                navigator.sendBeacon('/logout');
-            }
-        });
-
-        window.addEventListener('beforeunload', function() {
-            // Absolute browser kill logic execution layer
-            navigator.sendBeacon('/logout');
-        });
     </script>
 
     <footer class="mt-12 border-t border-slate-900/80 bg-[#0a0d14] py-4 text-center text-[11px] text-slate-600 font-mono tracking-wider">

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI, Request, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, Request, Form, HTTPException, status, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 import os
 import datetime
@@ -44,9 +44,13 @@ DATASET_PREFIX = os.getenv("DATASET",None)
 # ========================================================
 def log_activity_to_bq(username: str, action: str, service: str, status_val: str, details: str):
     table_id = f"{DATASET_PREFIX}.audit_logs"
+    
+    # 🎯 PYTHON 3.14 FIX: utcnow() replaced with timezone-aware ISO format
+    current_utc_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    
     rows_to_insert = [{
         "id": str(uuid.uuid4()),
-        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "timestamp": current_utc_time,
         "username": username,
         "action": action,
         "service": service,
@@ -54,7 +58,6 @@ def log_activity_to_bq(username: str, action: str, service: str, status_val: str
         "details": details
     }]
     try:
-        # Using the correct bq_client object now
         bq_client.insert_rows_json(table_id, rows_to_insert)
     except Exception as e:
         print(f"🚨 BQ Logging Failed: {str(e)}")
@@ -74,12 +77,25 @@ def verify_user_from_bq(username_input: str, password_input: str) -> bool:
         print(f"🚨 BQ Auth Query Failed: {str(e)}")
         return False
 
+# 🎯 FIXED MIDDLEWARE: Dashboard actions aur API paths par strict no-store session nahi todega
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response: Response = await call_next(request)
+    
+    if request.url.path in ["/login", "/logout"]:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    else:
+        response.headers["Cache-Control"] = "no-cache, must-revalidate, max-age=0"
+        
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 # ========================================================
 # 🔑 LOGIN & LOGOUT ROUTING ENGINES
 # ========================================================
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    # Context dictionary explicitly defined inside named argument
    return templates.TemplateResponse(request, name="login.html", context={})
 
 @app.post("/login")
@@ -88,20 +104,37 @@ async def handle_login(username: str = Form(...), password: str = Form(...)):
         log_activity_to_bq(username, "LOGIN", "SYSTEM", "SUCCESS", "Logged in via VPN Link")
         
         response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-        response.set_cookie(key="session_user", value=username)
+        response.set_cookie(
+            key="session_user", 
+            value=username, 
+            path="/",               # ◄── Secure domain-wide lock
+            httponly=True,          
+            samesite="lax"          
+        )
         return response
     
     log_activity_to_bq(username, "LOGIN", "SYSTEM", "❌ FAILED", f"Wrong credentials typed for user: {username}")
     return RedirectResponse(url="/login?error=true", status_code=status.HTTP_303_SEE_OTHER)
 
-@app.get("/logout")
+@app.post("/logout")
 async def handle_logout(request: Request):
     username = request.cookies.get("session_user") or "Unknown_User"
     log_activity_to_bq(username, "LOGOUT", "SYSTEM", "SUCCESS", "User logged out safely")
     
     response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-    response.delete_cookie("session_user") 
+    response.delete_cookie(key="session_user", path="/")
     return response
+
+@app.get("/logout", include_in_schema=False)
+async def handle_logout_get_fallback(request: Request):
+    return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    favicon_path = os.path.join(os.path.dirname(__file__), "favicon.ico")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path)
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 def get_all_services():
     if not os.path.exists(BASE_SERVER_DIR):
@@ -260,9 +293,8 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             if os.path.isfile(os.path.join(cleanup_dir, f)) and f.endswith(".py")
         ])
 
-    # 🎯 BUG FIX 2: Fixed Template Context mapping & Name Error
     return templates.TemplateResponse(
-        request=request,  # Named argument handles all FastAPI versions seamlessly
+        request=request,  
         name="index.html", 
         context={
             "user": username, 
@@ -283,14 +315,12 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
 # 2. API Endpoint: Fetch Production Code Content
 @app.get("/api/get-file-content")
 async def get_file_content(request: Request, service: str, filename: str):
-    # Security Session Validation
     username = request.cookies.get("session_user")
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized session.")
         
     file_path = os.path.join(BASE_SERVER_DIR, service, filename)
     if os.path.exists(file_path):
-        # Audit load event to BQ
         log_activity_to_bq(username, "LOAD_TEMPLATE", service, "SUCCESS", f"Viewed code for {filename}")
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             return {"content": f.read()}
@@ -351,7 +381,6 @@ async def run_playground(request: Request, service: str = Form(...), pin: str = 
         else:
             subprocess.Popen(["bash", "playground.sh"], cwd=service_playground_dir)
             
-        # 🎯 BUG FIX 3: Dynamic audit tracker injected for scripts execution
         log_activity_to_bq(username, "TRIGGER_SCRIPT", service, "⏳ STARTED", "Playground script processing initiated in GitBash background")
         return {
             "status": "success", 
