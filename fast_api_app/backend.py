@@ -85,7 +85,7 @@ async def add_security_headers(request: Request, call_next):
     if request.url.path in ["/login", "/logout"]:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     else:
-        response.headers["Cache-Control"] = "no-cache, must-revalidate, max-age=0"
+        response.headers["Cache-Control"] = "no-store,no-cache, must-revalidate, max-age=0"
         
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -96,6 +96,8 @@ async def add_security_headers(request: Request, call_next):
 # ========================================================
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
+   if request.cookies.get("session_user"):
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
    return templates.TemplateResponse(request, name="login.html", context={})
 
 @app.post("/login")

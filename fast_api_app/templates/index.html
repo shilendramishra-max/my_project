@@ -672,6 +672,38 @@
             }, 4000);
         }
 
+
+//         // 🛡️ ANTI-BACK/FORWARD GHOST ENGINE (bfcache Destroyer)
+// window.addEventListener('pageshow', function (event) {
+//     // Agar page browser ki history ya memory cache se uthaya gaya hai (Type 2 navigation)
+//     if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+//         console.log("🚨 Ghost session detected via Browser History! Forcing hard redirect...");
+//         window.location.reload(); // Instant reload taaki Python security check hit ho
+//     }
+// });
+
+
+
+// // 🛡️ UNIVERSAL ANTI-BACK/FORWARD ENGINE (Upgraded bfcache Destroyer)
+// window.addEventListener('pageshow', function (event) {
+//     // 1. Check karega agar page memory cache se loaded hai
+//     if (event.persisted) {
+//         console.log("🚨 Deep Cache detected! Forcing hard reload...");
+//         window.location.reload();
+//         return;
+//     }
+
+//     // 2. Naye browsers ke liye accurate Navigation Timing Check (Type: back_forward)
+//     const navigationEntries = performance.getEntriesByType("navigation");
+//     if (navigationEntries.length > 0) {
+//         const navType = navigationEntries[0].type;
+//         if (navType === "back_forward") {
+//             console.log("🚨 Back/Forward detected via Performance API! Redirecting...");
+//             window.location.reload(); // Fresh request bhejega FastAPI ke paas
+//         }
+//     }
+// });
+
         // 🎯 JINJA COMPLIANCE FIX 2: Dynamic status handling wrapped into safe JS string
         const activeSystemStatus = "{{ status }}";
         if (activeSystemStatus.includes("RUNNING") || activeSystemStatus.includes("LOCKED")) {
