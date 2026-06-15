@@ -20,7 +20,7 @@ SYSTEM_SECRET_PIN = os.getenv("ADMIN_SECURITY_PIN", None)
 
 # Pick the history days from memory
 END_HISTORY_DAYS = int(os.getenv("END_HISTORY_DAYS", 15))
-STRAT_HISTORY_DAYS = int(os.getenv("STRAT_HISTORY_DAYS", 0))
+START_HISTORY_DAYS = int(os.getenv("START_HISTORY_DAYS", 0))
 # Log view character limit from memory
 LOG_VIEW_CHARACTER_LIMIT = int(os.getenv("LOG_VIEW_CHARACTER_LIMIT", 1500))
 
@@ -207,7 +207,7 @@ async def read_dashboard(request: Request, service: str = None, date: str = None
             else:
                 status_msg = "⚪ NOT STARTED / PENDING"
 
-        for i in range(STRAT_HISTORY_DAYS, END_HISTORY_DAYS):
+        for i in range(START_HISTORY_DAYS, END_HISTORY_DAYS):
             date_to_check = (datetime.datetime.now() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
             check_lck_path = os.path.join(usage_dir, f"check_usage-{date_to_check}.lck")
