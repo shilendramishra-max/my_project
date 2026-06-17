@@ -15,9 +15,9 @@ app = FastAPI(title="Centralized Reconciliation Dashboard (FastAPI Production En
 load_dotenv()
 SYSTEM_SECRET_PIN = os.getenv("ADMIN_SECURITY_PIN", None)
 END_HISTORY_DAYS = int(os.getenv("END_HISTORY_DAYS", 15))
-STRAT_HISTORY_DAYS = int(os.getenv("STRAT_HISTORY_DAYS", 0))
+START_HISTORY_DAYS = int(os.getenv("START_HISTORY_DAYS", 0))
 LOG_VIEW_CHARACTER_LIMIT = int(os.getenv("LOG_VIEW_CHARACTER_LIMIT", 1500))
-Description: This block serves as the main entry point and configuration layer of the application. It initializes the FastAPI production instance and loads environment variables from the .env file into system memory. It securely extracts critical runtime properties, including the SYSTEM_SECRET_PIN used for sandbox authorization bypass thresholds, the LOG_VIEW_CHARACTER_LIMIT to restrict dynamic buffer chunk reading size on the terminal console, and the historical date tracking boundaries (STRAT_HISTORY_DAYS to END_HISTORY_DAYS) for timeline synchronization.
+Description: This block serves as the main entry point and configuration layer of the application. It initializes the FastAPI production instance and loads environment variables from the .env file into system memory. It securely extracts critical runtime properties, including the SYSTEM_SECRET_PIN used for sandbox authorization bypass thresholds, the LOG_VIEW_CHARACTER_LIMIT to restrict dynamic buffer chunk reading size on the terminal console, and the historical date tracking boundaries (START_HISTORY_DAYS to END_HISTORY_DAYS) for timeline synchronization.
 
 2. Absolute Path Detection & Directory Binding
 Code Implementation:
@@ -181,12 +181,12 @@ Description: An active infrastructure state assessment matrix block. It maps the
 Code Implementation:
 
 Python
-for i in range(STRAT_HISTORY_DAYS, END_HISTORY_DAYS):
+for i in range(START_HISTORY_DAYS, END_HISTORY_DAYS):
     date_to_check = (datetime.datetime.now() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
     check_lck_path = os.path.join(usage_dir, f"check_usage-{date_to_check}.lck")
     check_success_path = os.path.join(stat_dir, f"stat-{date_to_check}.txt")
     recon_history.append({"date": date_to_check, "status": day_status, "color": day_color})
-Description: This loop compiles data configurations for the historical time-series calendar component visible on the main UI panel. By traversing historical range steps (STRAT_HISTORY_DAYS to END_HISTORY_DAYS), it checks directory paths for the presence of flag files across the preceding 15 days. Based on file existence, file content, and file size boundaries (0B empty chunks vs. valid trace data blocks), it populates a dictionary collection with clear visual design mappings (green for success, red for error traps, yellow for unverified states). This collection is then passed to the frontend rendering pipeline.
+Description: This loop compiles data configurations for the historical time-series calendar component visible on the main UI panel. By traversing historical range steps (START_HISTORY_DAYS to END_HISTORY_DAYS), it checks directory paths for the presence of flag files across the preceding 15 days. Based on file existence, file content, and file size boundaries (0B empty chunks vs. valid trace data blocks), it populates a dictionary collection with clear visual design mappings (green for success, red for error traps, yellow for unverified states). This collection is then passed to the frontend rendering pipeline.
 
 14. Dropdown File Management & Chronological Sorting Optimization
 Code Implementation:
