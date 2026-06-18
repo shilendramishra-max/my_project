@@ -10,7 +10,15 @@ from dotenv import load_dotenv
 import uuid
 from google.cloud import bigquery
 
-app = FastAPI(title="Centralized Reconciliation Dashboard (FastAPI Production Engine)")
+app = FastAPI(title="Centralized Reconciliation Dashboard (FastAPI Production Engine)",description="""
+    API for centralized reconciliation processing,
+    exception management, reporting, and monitoring.
+    """,contact={
+        "name": "shilendra.mishra",
+        "email": "shilendra.mishra@spicemoney.com",
+    },docs_url=None,
+    redoc_url=None,
+    openapi_url=None,)
 
 # It will load .env file in memory 
 load_dotenv()
@@ -26,11 +34,12 @@ LOG_VIEW_CHARACTER_LIMIT = int(os.getenv("LOG_VIEW_CHARACTER_LIMIT", 1500))
 
 # --- ABSOLUTE TEMPLATE PATH DETECTION ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+print(f"📂 Current Backend Directory: {CURRENT_DIR}")
 templates = Jinja2Templates(directory=os.path.join(CURRENT_DIR, "templates"))
-
+print(f"📂 Jinja2 Templates Directory: {os.path.join(CURRENT_DIR, 'templates')}")
 # --- SIBLING FOLDER CRONS PATH ---
 BASE_SERVER_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../crons"))
-
+print(f"📂 Base Server Directory for Services: {BASE_SERVER_DIR}")
 project_id = os.getenv("PROJECT_ID",None)
 os.environ['GOOGLE_CLOUD_QUOTA_PROJECT'] = project_id
 
