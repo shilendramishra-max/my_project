@@ -43,7 +43,15 @@
             <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-3 px-4 rounded text-sm transition transform active:scale-95 shadow-lg">
                 Verify & Enter Dashboard
             </button>
+            
+<div style="text-align: right; margin-top: 10px; margin-bottom: 15px;">
+    <a href="javascript:void(0);" onclick="showForgotMessage()" style="color: #007bff; text-decoration: none; font-size: 14px; font-family: sans-serif;">Forgot Password?</a>
+</div>
+
+
         </form>
+
+        
     </div>
 
     <script>
@@ -53,5 +61,23 @@
             document.getElementById('error-box').classList.remove('hidden');
         }
     </script>
+
+
+<script>
+function showForgotMessage() {
+    // 🎯 YAHAN APNA MESSAGE LIKHO: \n lagane se nayi line (Enter) ban jayegi
+    var message = "🔒 PASSWORD RECOVERY \n\n" +
+                  "You cannot reset your password manually.\n" +
+                  "Please contact Shilendra Kumar Mishra to get a new password.\n\n" +
+                  "📩 Contact Helpdesk: shilendra.mishra@spicemoney.com;"
+                  
+    // Yeh direct native browser window pop-up kholega jo hamesha chalta hai
+    alert(message);
+}
+</script>
+
+
+    
 </body>
+
 </html>
